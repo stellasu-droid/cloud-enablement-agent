@@ -1,0 +1,104 @@
+{
+  "eval_cases": [
+    {
+      "eval_case_id": "outline_cloud_run",
+      "prompt": {
+        "role": "user",
+        "parts": [
+          {
+            "text": "Cloud Run basics"
+          }
+        ]
+      }
+    },
+    {
+      "eval_case_id": "teach_subtopic_cloud_run",
+      "agent_data": {
+        "agents": {
+          "enablement_agent": {
+            "agent_id": "enablement_agent",
+            "agent_type": "LlmAgent",
+            "instruction": "Enablement coach for Google Cloud and Google AI topics."
+          }
+        },
+        "turns": [
+          {
+            "turn_index": 0,
+            "events": [
+              {
+                "author": "user",
+                "content": {
+                  "role": "user",
+                  "parts": [
+                    {
+                      "text": "Cloud Run basics"
+                    }
+                  ]
+                }
+              },
+              {
+                "author": "enablement_agent",
+                "content": {
+                  "role": "model",
+                  "parts": [
+                    {
+                      "function_call": {
+                        "name": "curriculum_planner",
+                        "args": {
+                          "request": "Topic: Cloud Run basics. Learner level: intermediate."
+                        }
+                      }
+                    }
+                  ]
+                }
+              },
+              {
+                "author": "enablement_agent",
+                "content": {
+                  "role": "user",
+                  "parts": [
+                    {
+                      "function_response": {
+                        "name": "curriculum_planner",
+                        "response": {
+                          "result": "**Course: Cloud Run Basics**\n\n1. **Cloud Run Fundamentals** - Explain the serverless container model, services vs jobs, and the container runtime contract.\n2. **Deploying a Service** - Deploy a container image to Cloud Run and configure memory, CPU and concurrency.\n3. **Revisions and Traffic Splitting** - Roll out new revisions gradually and roll back safely.\n4. **Securing Cloud Run Services** - Control access with IAM, service identities and ingress settings."
+                        }
+                      }
+                    }
+                  ]
+                }
+              },
+              {
+                "author": "enablement_agent",
+                "content": {
+                  "role": "model",
+                  "parts": [
+                    {
+                      "text": "**Course: Cloud Run Basics**\n\n1. **Cloud Run Fundamentals** - Explain the serverless container model, services vs jobs, and the container runtime contract.\n2. **Deploying a Service** - Deploy a container image to Cloud Run and configure memory, CPU and concurrency.\n3. **Revisions and Traffic Splitting** - Roll out new revisions gradually and roll back safely.\n4. **Securing Cloud Run Services** - Control access with IAM, service identities and ingress settings.\n\nPick a subtopic number, say next, or say all."
+                    }
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "turn_index": 1,
+            "events": [
+              {
+                "author": "user",
+                "content": {
+                  "role": "user",
+                  "parts": [
+                    {
+                      "text": "2"
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}
