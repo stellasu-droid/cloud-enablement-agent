@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Process-wide ADK session/artifact services shared by every serving surface.
+"""Process-wide ADK session/artifact/memory services shared by every serving surface.
 
 Registered under ``shared://`` so the ADK web routes, the A2A path, and the
 reasoning_engine adapter share one instance: a session created on any surface
@@ -30,6 +30,7 @@ from google.adk.cli.utils.service_factory import create_session_service_from_opt
 
 SESSION_SERVICE_URI = "shared://session"
 ARTIFACT_SERVICE_URI = "shared://artifact"
+MEMORY_SERVICE_URI = "shared://memory"
 
 _AGENT_DIR = os.path.dirname(
     os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -67,6 +68,25 @@ def get_artifact_service():
     return InMemoryArtifactService()
 
 
+@functools.cache
+def get_memory_service():
+    """Process-wide memory service: Agent Platform Memory Bank when an agent
+    engine is configured (same instance as Sessions), else in-memory."""
+    if agent_engine_id := os.environ.get("GOOGLE_CLOUD_AGENT_ENGINE_ID"):
+        from google.adk.memory import VertexAiMemoryBankService
+
+        return VertexAiMemoryBankService(
+            project=os.environ.get("GOOGLE_CLOUD_PROJECT"),
+            location=os.environ.get("GOOGLE_CLOUD_AGENT_ENGINE_LOCATION")
+            or os.environ.get("GOOGLE_CLOUD_LOCATION"),
+            agent_engine_id=agent_engine_id,
+        )
+    from google.adk.memory import InMemoryMemoryService
+
+    return InMemoryMemoryService()
+
+
 _registry = get_service_registry()
 _registry.register_session_service("shared", lambda uri, **kw: get_session_service())
 _registry.register_artifact_service("shared", lambda uri, **kw: get_artifact_service())
+_registry.register_memory_service("shared", lambda uri, **kw: get_memory_service())

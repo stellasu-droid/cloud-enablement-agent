@@ -45,9 +45,22 @@
                       "function_call": {
                         "name": "curriculum_planner",
                         "args": {
-                          "request": "Topic: Cloud Run basics. Learner level: intermediate."
+                          "topic": "Cloud Run basics",
+                          "learner_level": "intermediate",
+                          "goals": ""
                         }
                       }
+                    }
+                  ]
+                }
+              },
+              {
+                "author": "curriculum_planner",
+                "content": {
+                  "role": "model",
+                  "parts": [
+                    {
+                      "text": "**Course: Cloud Run basics**\n\n1. **Cloud Run Fundamentals** - Explain the serverless container model, services vs jobs, and the container runtime contract.\n2. **Deploying a Service** - Deploy a container image to Cloud Run and configure memory, CPU and concurrency.\n3. **Revisions and Traffic Splitting** - Roll out new revisions gradually and roll back safely.\n4. **Securing Cloud Run Services** - Control access with IAM, service identities and ingress settings."
                     }
                   ]
                 }
@@ -61,7 +74,38 @@
                       "function_response": {
                         "name": "curriculum_planner",
                         "response": {
-                          "result": "**Course: Cloud Run Basics**\n\n1. **Cloud Run Fundamentals** - Explain the serverless container model, services vs jobs, and the container runtime contract.\n2. **Deploying a Service** - Deploy a container image to Cloud Run and configure memory, CPU and concurrency.\n3. **Revisions and Traffic Splitting** - Roll out new revisions gradually and roll back safely.\n4. **Securing Cloud Run Services** - Control access with IAM, service identities and ingress settings."
+                          "status": "ok",
+                          "shown_to_learner": true,
+                          "data": {
+                            "topic": "Cloud Run basics",
+                            "subtopics": [
+                              {
+                                "number": 1,
+                                "title": "Cloud Run Fundamentals",
+                                "objective": "Explain the serverless container model, services vs jobs, and the container runtime contract.",
+                                "complexity": 1
+                              },
+                              {
+                                "number": 2,
+                                "title": "Deploying a Service",
+                                "objective": "Deploy a container image to Cloud Run and configure memory, CPU and concurrency.",
+                                "complexity": 2
+                              },
+                              {
+                                "number": 3,
+                                "title": "Revisions and Traffic Splitting",
+                                "objective": "Roll out new revisions gradually and roll back safely.",
+                                "complexity": 3
+                              },
+                              {
+                                "number": 4,
+                                "title": "Securing Cloud Run Services",
+                                "objective": "Control access with IAM, service identities and ingress settings.",
+                                "complexity": 3
+                              }
+                            ]
+                          },
+                          "next_step": "Reply with exactly one line: Pick a subtopic number, say next, or say all."
                         }
                       }
                     }
@@ -74,7 +118,7 @@
                   "role": "model",
                   "parts": [
                     {
-                      "text": "**Course: Cloud Run Basics**\n\n1. **Cloud Run Fundamentals** - Explain the serverless container model, services vs jobs, and the container runtime contract.\n2. **Deploying a Service** - Deploy a container image to Cloud Run and configure memory, CPU and concurrency.\n3. **Revisions and Traffic Splitting** - Roll out new revisions gradually and roll back safely.\n4. **Securing Cloud Run Services** - Control access with IAM, service identities and ingress settings.\n\nPick a subtopic number, say next, or say all."
+                      "text": "Pick a subtopic number, say next, or say all."
                     }
                   ]
                 }

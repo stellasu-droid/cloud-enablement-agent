@@ -16,40 +16,93 @@ Agent generated with `agents-cli` version `1.8.0`.
 ```mermaid
 flowchart TD
     U["Learner"] <--> C["enablement_agent (coach)"]
-    C --> P["curriculum_planner"]
-    C --> E["explainer"]
-    C --> L["lab_designer"]
-    C --> Q["quiz_master"]
+    C -- "preload_memory" --> M[("Agent Platform Memory Bank")]
+    C -- "confirm_bulk_generation / confirm_costly_lab" --> H{"Learner approves?"}
+    C --> P["curriculum_planner: TopicRequest to CourseOutline"]
+    C --> E["explainer: SubtopicRequest to Explainer"]
+    C --> L["lab_designer: SubtopicRequest to LabGuide"]
+    C --> Q["quiz_master: SubtopicRequest to Quiz"]
 ```
 
-- `enablement_agent` is the only agent the learner talks to. It decides which
-  specialist to call and presents the results.
-- The four specialists are ADK sub-agents in `single_turn` mode: ADK exposes
-  each one to the coach as a tool, so control always returns to the coach.
-  For a subtopic, the coach calls the explainer, lab designer and quiz master
-  in parallel.
-- All agents use `gemini-3.8-flash` on Vertex AI (`GOOGLE_CLOUD_LOCATION=global`).
+- **Coordinator + specialists.** `enablement_agent` is the only agent the
+  learner talks to. The four specialists are `single_turn` sub-agents that ADK
+  exposes to the coach as tools. For a subtopic the coach calls explainer, lab
+  designer and quiz master one at a time; each specialist's output is shown to
+  the learner once, and the coach adds only a one-line wrap-up.
+- **Typed tool contracts** (`app/schemas.py`). Every specialist has an
+  `input_schema` (field descriptions become tool parameter docs) and an
+  `output_schema`. The learner sees deterministic markdown (`app/render.py`);
+  the coach gets `{"status": "ok" | "needs_approval" | "error", ...}` with a
+  `next_step` or `recovery_hint`.
+- **Guided errors.** Failures become `{error_type, attempt, recovery_hint}` with
+  a retry budget of one per specialist and subtopic; the retry runs on a
+  stronger model.
+- **Model routing** (`app/routing.py`). Base tier per role (planner =
+  `gemini-3.1-pro-preview`, coach / explainer / lab = `gemini-3.8-flash`,
+  quiz and compaction = `gemini-3.5-flash`), escalated one tier for retries,
+  hard subtopics (complexity >= 4) or advanced learners. Override with
+  `MODEL_FAST` / `MODEL_FLASH` / `MODEL_PRO`.
+- **Guardrails** (`app/guardrails.py`). PII and secrets are redacted from
+  learner messages before any model or log sees them; prompt-injection
+  attempts are flagged; labs are linted (no broad roles, public principals,
+  project deletion, recursive force deletes, piping downloads into a shell,
+  inline keys, open SSH/RDP or literal project IDs; clean-up required).
+  Unsafe labs are withheld and regenerated.
+- **Human in the loop.** The learner must approve (1) generating several
+  subtopics at once and (2) any lab estimated above \$2
+  (`LAB_COST_APPROVAL_USD`). The costly lab is held back, cached in session
+  state and shown after approval without a second model call; on rejection a
+  cheaper variant (max \$2) is requested.
+- **Memory and context.** Agent Platform Sessions keep history; Memory Bank
+  keeps the learner's level, goals and completed subtopics (written in the
+  background after each turn: learner messages go to topic extraction, and
+  completed subtopics are written as consolidated direct memories; lesson
+  content is never sent). Older turns are compacted every 4 turns.
+- **Observability.** JSON logs (PII-redacted) with one intent + outcome record
+  per turn (specialist statuses, retries, violations, HITL, model tier per
+  call, tokens, latency), mirrored as `enablement.*` OpenTelemetry span
+  attributes alongside ADK's Cloud Trace spans.
 
 ## Project Structure
 
 ```
 enablement-agent/
-├── app/         # Core agent code
-│   ├── agent.py               # Coach (root agent) + App
+├── app/
+│   ├── agent.py               # Coach (root agent) + App (plugins, compaction)
 │   ├── agents.py              # Specialist sub-agents
 │   ├── prompts.py             # Instructions for every agent
+│   ├── schemas.py             # Typed input/output contracts
+│   ├── render.py              # JSON -> markdown for the learner
+│   ├── guardrails.py          # PII redaction, injection signals, lab linter
+│   ├── routing.py             # Model tier policy
+│   ├── tools.py               # HITL confirmation tools
+│   ├── memory.py              # Background Memory Bank writes
+│   ├── observability.py       # JSON log formatter
+│   ├── plugins/               # Observability, guardrail, routing plugins
 │   ├── fast_api_app.py        # FastAPI Backend server
-│   └── app_utils/             # App utilities and helpers
+│   └── app_utils/             # Session / artifact / memory services
+├── scripts/create_memory_bank.py  # Create / delete the Agent Platform instance
 ├── tests/                     # Unit, integration, and eval
-├── GEMINI.md                  # AI-assisted development guide
-└── pyproject.toml             # Project dependencies
+└── pyproject.toml
 ```
+
+## Memory Bank setup
+
+Sessions and Memory Bank live on one Agent Platform instance (no agent code is
+deployed to it):
+
+```bash
+uv run python scripts/create_memory_bank.py           # writes GOOGLE_CLOUD_AGENT_ENGINE_ID to .env
+uv run python scripts/create_memory_bank.py --delete  # removes it (and its sessions and memories)
+```
+
+Without `GOOGLE_CLOUD_AGENT_ENGINE_ID`, sessions and memory are in-memory.
 
 ## Try it
 
 ```bash
 agents-cli install
-agents-cli playground                         # web UI
+agents-cli playground                         # web UI (supports the approval prompts)
 # or from the terminal:
 agents-cli run --start-server "Cloud Run basics"
 agents-cli run "2" --session-id <session id printed above>
@@ -94,7 +147,7 @@ You can also use features from the [ADK](https://adk.dev/) CLI with `uv run adk`
 | `agents-cli install` | Install dependencies using uv                                                         |
 | `agents-cli playground` | Launch local development environment                                                  |
 | `agents-cli lint`    | Run code quality checks                                                               |
-| `agents-cli eval`    | Evaluate agent behavior (generate, grade, analyze, and more — see `agents-cli eval --help`) |
+| `agents-cli eval`    | Evaluate agent behavior (generate, grade, analyze, and more — see `agents-cli eval --help`). Prefix with `SESSION_SERVICE_URI=memory://` so seeded multi-turn cases don't use Agent Platform Sessions |
 | `uv run pytest tests/unit tests/integration` | Run unit and integration tests                                                        || [A2A Inspector](https://github.com/a2aproject/a2a-inspector) | Launch A2A Protocol Inspector                                                        |
 
 ## 🛠️ Project Management
